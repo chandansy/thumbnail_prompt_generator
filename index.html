@@ -725,17 +725,33 @@ function generate() {
 // ─── COPY ─────────────────────────────────────────────────────────
 function copyPrompt() {
   if (!generatedPrompt) return;
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(generatedPrompt).then(() => showCopied());
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = generatedPrompt;
-    ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta);
-    showCopied();
+
+  // Modern clipboard API (works on GitHub Pages HTTPS + most mobile browsers)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(generatedPrompt)
+      .then(showCopied)
+      .catch(() => fallbackCopy());
+    return;
   }
+  fallbackCopy();
+}
+
+function fallbackCopy() {
+  // iOS Safari fix — needs contentEditable + setSelectionRange
+  const ta = document.createElement('textarea');
+  ta.value = generatedPrompt;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+  try {
+    document.execCommand('copy');
+    showCopied();
+  } catch(e) {
+    alert('Auto-copy failed. Long-press the text above and copy manually.');
+  }
+  document.body.removeChild(ta);
 }
 
 function showCopied() {
